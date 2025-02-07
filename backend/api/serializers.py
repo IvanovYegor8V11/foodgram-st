@@ -85,13 +85,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
-        ingredients_data = validated_data.pop('recipe_ingredients', [])
+        ingredients_data = validated_data.pop('recipe_ingredients')
         recipe = super().create(validated_data)
         self._save_ingredients(recipe, ingredients_data)
         return recipe
 
     def update(self, instance, validated_data):
-        ingredients_data = validated_data.pop('recipe_ingredients', [])
+        ingredients_data = validated_data.pop('recipe_ingredients')
         instance.ingredients.clear()
         self._save_ingredients(instance, ingredients_data)
         return super().update(instance, validated_data)
@@ -129,6 +129,7 @@ class ShortRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
+        read_only_fields = fields
 
 
 class SubscribedUserSerializer(UserSerializer):
