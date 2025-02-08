@@ -15,7 +15,7 @@ const SubscriptionsPage = () => {
     setSubscriptionsPage
   } = useSubscriptions()
 
-  const getSubscriptions = ({ page = 1 }) => {
+  const getSubscriptions = ({ page }) => {
     api
       .getSubscriptions({ page })
       .then(res => {
@@ -46,7 +46,6 @@ const SubscriptionsPage = () => {
       <Pagination
         count={subscriptionsCount}
         limit={6}
-        page={subscriptionsPage}
         onPageChange={page => {
           setSubscriptionsPage(page)
         }}

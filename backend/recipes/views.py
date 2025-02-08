@@ -1,20 +1,12 @@
-from django.shortcuts import get_object_or_404
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
+from django.shortcuts import get_object_or_404, redirect
+from django.http import JsonResponse
 from .models import Recipe
 
-class RecipeShortLinkView(APIView):
-    """
-    Представление для обработки короткой ссылки на рецепт.
-    При GET-запросе перенаправляет пользователя на полную страницу рецепта.
-    """
-    def get(self, request, pk):
-        # Получаем объект рецепта или возвращаем 404, если рецепт не найден
-        recipe = get_object_or_404(Recipe, pk=pk)
-        
-        # Формируем полный URL для рецепта
-        full_url = request.build_absolute_uri(f'/recipes/{recipe.pk}/')
-        
-        # Возвращаем ответ с полным URL
-        return Response({'short_link': full_url}, status=status.HTTP_200_OK)
+def recipe_redirect_view(request, recipe_id):
+    
+    recipe_exists = Recipe.objects.filter(id=recipe_id).exists()
+    
+    if recipe_exists:
+        return redirect(f'/recipes/{recipe_id}/')
+    else:
+        return JsonResponse({'message': 'Рецепт с id {recipe_id} не найден!'}, status=404)

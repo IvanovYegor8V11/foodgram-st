@@ -1,32 +1,39 @@
 version: '3.3'
 services:
-
-  db:
-    container_name: foodgram-db
-    image: postgres:13.10
-    env_file: ./.env
+  db:    
+    image: postgres:13.10 
+    container_name: foodgram_db  
     volumes:
-      - pg_data:/var/lib/postgresql/data
-
-  backend:
-    container_name: foodgram-back
-    image: lerond/foodgram_backend:latest
-    volumes:
-      - static_value:/app/static/
+      - pg_data:/var/lib/postgresql/data/    
+    env_file:
+      - ./.env
+    networks:
+      - foodgram-network
+  
+  backend:    
+    container_name: foodgram_backend
+    build: ../backend
+    restart: always    
+    volumes:    
+      - static_value:/app/static/      
       - media_value:/app/media/
-      - ../data:/app/data
+      - ../data:/app/data   
     ports:
       - "8000:8000"
-    env_file: ./.env
     depends_on:
       - db
+    env_file:
+      - ./.env 
+    networks:
+      - foodgram-network
 
   frontend:
-    container_name: foodgram-front
-    image: lerond/foodgram_frontend:latest
+    container_name: foodgram_frontend
     build: ../frontend
     volumes:
       - ../frontend/:/app/result_build/
+    networks:
+      - foodgram-network
   nginx:
     container_name: foodgram-proxy
     image: nginx:1.25.4-alpine
@@ -38,12 +45,18 @@ services:
       - ../docs/:/usr/share/nginx/html/api/docs/
       - static_value:/var/html/static/
       - media_value:/var/html/media/
+    networks:
+      - foodgram-network
 
-    depends_on:
-      - frontend
+    depends_on:   
       - backend
+      - frontend
 
-volumes:
-  pg_data:
+volumes:   
   static_value:
   media_value:
+  pg_data:
+
+networks:
+  foodgram-network:
+    driver: bridge
