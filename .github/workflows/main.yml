@@ -43,7 +43,7 @@ jobs:
         POSTGRES_PASSWORD: django_password
         POSTGRES_DB: django_db
       run: |
-        psql postgresql://django_user:django_password@127.0.0.1:5432/django_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+        psql postgresql://django_user:django_password@127.0.0.1:5432/django_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO django_user; GRANT ALL ON SCHEMA public TO public;"
 
     - name: Apply migrations
       env:
@@ -55,6 +55,7 @@ jobs:
         DB_PORT: 5432
       run: |
         cd backend/
+        python manage.py makemigrations recipes
         python manage.py makemigrations
         python manage.py migrate
 
