@@ -1,64 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.safestring import mark_safe
-from django.db.models import Count
 from .models import (
-    User,
-    Subscription,
     Recipe,
     Ingredient,
     IngredientInRecipe,
     Favorite,
-    ShoppingCart
+    ShoppingCart,
+    User,
+    Subscription
 )
-
-
-@admin.register(User)
-class UserAdmin(UserAdmin):
-    """Модель пользователей для админ-зоны проекта"""
-
-    def get_full_name_display(self, obj):
-        return f"{obj.first_name} {obj.last_name}"
-    get_full_name_display.short_description = 'ФИО'
-
-    def get_avatar_display(self, obj):
-        if obj.avatar:
-            return mark_safe(f'<img src="{obj.avatar.url}" width="50" height="50" />')
-        return 'Нет аватара'
-    get_avatar_display.short_description = 'Аватар'
-
-    def get_recipe_count(self, obj):
-        return obj.recipes.count()
-    get_recipe_count.short_description = 'Рецептов'
-
-    def get_subscriptions_count(self, obj):
-        return obj.users.count()
-    get_subscriptions_count.short_description = 'Подписок'
-
-    def get_subscribers_count(self, obj):
-        return obj.authors.count()
-    get_subscribers_count.short_description = 'Подписчиков'
-
-    list_display = (
-        'id',
-        'username',
-        'get_full_name_display',
-        'email',
-        'get_avatar_display',
-        'get_recipe_count',
-        'get_subscriptions_count',
-        'get_subscribers_count',
-    )
-    search_fields = ('username', 'email')
-    ordering = ('id',)
-
-
-@admin.register(Subscription)
-class SubscriptionAdmin(admin.ModelAdmin):
-    """Модель подписок для админ-зоны проекта"""
-
-    list_display = ('user', 'author')
-    search_fields = ('user__email', 'author__email')
 
 
 @admin.register(Ingredient)
@@ -75,36 +26,36 @@ class IngredientAdmin(admin.ModelAdmin):
 class RecipeAdmin(admin.ModelAdmin):
     """Админка для модели рецептов"""
 
-    def get_ingredients_display(self, obj):
-        ingredients = obj.recipe_ingredients.all()
-        return mark_safe('<br>'.join([
-            f'{ing.ingredient.name} - {ing.amount} {ing.ingredient.measurement_unit}'
-            for ing in ingredients
-        ]))
-    get_ingredients_display.short_description = 'Продукты'
-
-    def get_image_display(self, obj):
-        if obj.image:
-            return mark_safe(f'<img src="{obj.image.url}" width="50" height="50" />')
-        return 'Нет изображения'
-    get_image_display.short_description = 'Картинка'
-
-    def get_favorites_count(self, obj):
-        return obj.favorites.count()
-    get_favorites_count.short_description = 'В избранном'
-
     list_display = (
         'id',
         'name',
         'cooking_time',
         'author',
         'get_favorites_count',
-        'get_ingredients_display',
-        'get_image_display',
+        'get_ingredients',
+        'get_image'
     )
     search_fields = ('name', 'author__username', 'author__email')
     list_filter = ('author', 'created_at')
     ordering = ('id',)
+
+    @admin.display(description='В избранном')
+    def get_favorites_count(self, recipe):
+        """Отображает общее число добавлений рецепта в избранное"""
+        return recipe.favorites.count()
+
+    @admin.display(description='Ингредиенты')
+    def get_ingredients(self, recipe):
+        """Отображает список ингредиентов рецепта"""
+        ingredients = recipe.ingredients.all()
+        return mark_safe('<br>'.join([f'{ing.name} - {ing.amount} {ing.measurement_unit}' for ing in ingredients]))
+
+    @admin.display(description='Изображение')
+    def get_image(self, recipe):
+        """Отображает изображение рецепта"""
+        if recipe.image:
+            return mark_safe(f'<img src="{recipe.image.url}" width="50" height="50">')
+        return 'Нет изображения'
 
 
 @admin.register(IngredientInRecipe)
@@ -122,3 +73,63 @@ class FavoriteAndShoppingCartAdmin(admin.ModelAdmin):
     list_display = ('user', 'recipe')
     search_fields = ('user__email', 'recipe__name')
     list_filter = ('user',)
+
+
+@admin.register(User)
+class UserAdmin(UserAdmin):
+    """Модель пользователей для админ-зоны проекта"""
+
+    list_display = (
+        'id',
+        'username',
+        'get_full_name',
+        'email',
+        'get_avatar',
+        'get_recipes_count',
+        'get_subscriptions_count',
+        'get_subscribers_count'
+    )
+    search_fields = ('username', 'email', 'first_name', 'last_name')
+    ordering = ('id',)
+    
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Персональная информация', {'fields': ('first_name', 'last_name', 'email', 'avatar')}),
+        ('Права доступа', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Важные даты', {'fields': ('last_login', 'date_joined')}),
+    )
+
+    @admin.display(description='ФИО')
+    def get_full_name(self, user):
+        """Отображает полное имя пользователя"""
+        return f'{user.first_name} {user.last_name}'
+
+    @admin.display(description='Аватар')
+    def get_avatar(self, user):
+        """Отображает аватар пользователя"""
+        if user.avatar:
+            return mark_safe(f'<img src="{user.avatar.url}" width="50" height="50">')
+        return 'Нет аватара'
+
+    @admin.display(description='Рецепты')
+    def get_recipes_count(self, user):
+        """Отображает количество рецептов пользователя"""
+        return user.recipes.count()
+
+    @admin.display(description='Подписки')
+    def get_subscriptions_count(self, user):
+        """Отображает количество подписок пользователя"""
+        return user.subscriptions.count()
+
+    @admin.display(description='Подписчики')
+    def get_subscribers_count(self, user):
+        """Отображает количество подписчиков пользователя"""
+        return user.subscribers.count()
+
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    """Модель подписок для админ-зоны проекта"""
+
+    list_display = ('user', 'author')
+    search_fields = ('user__email', 'author__email')
