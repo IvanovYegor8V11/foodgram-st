@@ -7,9 +7,10 @@ from recipes.models import (
     IngredientInRecipe,
     Recipe,
     ShoppingCart,
+    Subscription,
+    User,
 )
 from rest_framework import serializers
-from users.models import Subscription, User
 
 
 class UserSerializer(DjoserUserSerializer):
