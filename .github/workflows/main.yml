@@ -37,6 +37,13 @@ jobs:
           echo "Waiting for PostgreSQL..."
           sleep 2
         done
+    - name: Reset database
+      env:
+        POSTGRES_USER: django_user
+        POSTGRES_PASSWORD: django_password
+        POSTGRES_DB: django_db
+      run: |
+        psql postgresql://django_user:django_password@127.0.0.1:5432/django_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
     - name: Apply migrations
       env:
