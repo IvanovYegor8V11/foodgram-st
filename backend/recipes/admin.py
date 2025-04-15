@@ -1,13 +1,11 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
+from django.utils.safestring import mark_safe
 from .models import (
     Recipe,
     Ingredient,
     IngredientInRecipe,
     Favorite,
-    ShoppingCart,
-    User,
-    Subscription
+    ShoppingCart
 )
 
 
@@ -25,15 +23,36 @@ class IngredientAdmin(admin.ModelAdmin):
 class RecipeAdmin(admin.ModelAdmin):
     """Админка для модели рецептов"""
 
-    list_display = ('id', 'name', 'author', 'get_favorites_count')
+    def get_ingredients_display(self, obj):
+        ingredients = obj.recipe_ingredients.all()
+        return mark_safe('<br>'.join([
+            f'{ing.ingredient.name} - {ing.amount} {ing.ingredient.measurement_unit}'
+            for ing in ingredients
+        ]))
+    get_ingredients_display.short_description = 'Продукты'
+
+    def get_image_display(self, obj):
+        if obj.image:
+            return mark_safe(f'<img src="{obj.image.url}" width="50" height="50" />')
+        return 'Нет изображения'
+    get_image_display.short_description = 'Картинка'
+
+    def get_favorites_count(self, obj):
+        return obj.favorites.count()
+    get_favorites_count.short_description = 'В избранном'
+
+    list_display = (
+        'id',
+        'name',
+        'cooking_time',
+        'author',
+        'get_favorites_count',
+        'get_ingredients_display',
+        'get_image_display',
+    )
     search_fields = ('name', 'author__username', 'author__email')
     list_filter = ('author', 'created_at')
     ordering = ('id',)
-
-    @admin.display(description='В избранном')
-    def get_favorites_count(self, recipe):
-        """Отображает общее число добавлений рецепта в избранное"""
-        return recipe.favorites.count()
 
 
 @admin.register(IngredientInRecipe)
@@ -51,27 +70,3 @@ class FavoriteAndShoppingCartAdmin(admin.ModelAdmin):
     list_display = ('user', 'recipe')
     search_fields = ('user__email', 'recipe__name')
     list_filter = ('user',)
-
-
-@admin.register(User)
-class UserAdmin(UserAdmin):
-    """Модель пользователей для админ-зоны проекта"""
-
-    list_display = (
-        'id',
-        'username',
-        'email',
-        'first_name',
-        'last_name',
-        'password',
-    )
-    search_fields = ('username', 'email')
-    ordering = ('id',)
-
-
-@admin.register(Subscription)
-class SubscriptionAdmin(admin.ModelAdmin):
-    """Модель подписок для админ-зоны проекта"""
-
-    list_display = ('user', 'author')
-    search_fields = ('user__email', 'author__email')

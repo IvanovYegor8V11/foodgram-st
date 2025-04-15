@@ -7,10 +7,9 @@ from recipes.models import (
     IngredientInRecipe,
     Recipe,
     ShoppingCart,
-    Subscription,
-    User,
 )
 from rest_framework import serializers
+from users.models import Subscription, User
 
 
 class UserSerializer(DjoserUserSerializer):
@@ -86,13 +85,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
-        ingredients_data = validated_data.pop('recipe_ingredients', [])
+        ingredients_data = validated_data.pop('recipe_ingredients')
         recipe = super().create(validated_data)
         self._save_ingredients(recipe, ingredients_data)
         return recipe
 
     def update(self, instance, validated_data):
-        ingredients_data = validated_data.pop('recipe_ingredients', [])
+        ingredients_data = validated_data.pop('recipe_ingredients')
         instance.ingredients.clear()
         self._save_ingredients(instance, ingredients_data)
         return super().update(instance, validated_data)

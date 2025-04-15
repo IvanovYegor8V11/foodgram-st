@@ -1,6 +1,5 @@
 version: '3.3'
 services:
-
   db:
     container_name: foodgram-db
     image: postgres:13.10
@@ -10,7 +9,9 @@ services:
 
   backend:
     container_name: foodgram-back
-    image: lerond/foodgram_backend:latest
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
     volumes:
       - static_value:/app/static/
       - media_value:/app/media/
@@ -27,6 +28,7 @@ services:
     build: ../frontend
     volumes:
       - ../frontend/:/app/result_build/
+  
   nginx:
     container_name: foodgram-proxy
     image: nginx:1.25.4-alpine
@@ -38,7 +40,6 @@ services:
       - ../docs/:/usr/share/nginx/html/api/docs/
       - static_value:/var/html/static/
       - media_value:/var/html/media/
-
     depends_on:
       - frontend
       - backend
