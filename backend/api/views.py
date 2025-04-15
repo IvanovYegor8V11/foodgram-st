@@ -6,6 +6,8 @@ from recipes.models import (
     Ingredient,
     Recipe,
     ShoppingCart,
+    Subscription,
+    User
 )
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -18,7 +20,6 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
-from users.models import Subscription, User
 
 from .pagination import PagesPagination
 from .serializers import (
