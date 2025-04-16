@@ -86,13 +86,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
-        ingredients_data = validated_data.pop('recipe_ingredients', [])
+        ingredients_data = validated_data.pop('recipe_ingredients')
         recipe = super().create(validated_data)
         self._save_ingredients(recipe, ingredients_data)
         return recipe
 
     def update(self, instance, validated_data):
-        ingredients_data = validated_data.pop('recipe_ingredients', [])
+        ingredients_data = validated_data.pop('recipe_ingredients')
         instance.ingredients.clear()
         self._save_ingredients(instance, ingredients_data)
         return super().update(instance, validated_data)
@@ -125,11 +125,12 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class ShortRecipeSerializer(serializers.ModelSerializer):
-    """Сериалайзер для получения рецептов на странице подписки"""
+    """Сериализатор для краткого отображения рецепта."""
 
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
+        read_only_fields = ('id', 'name', 'image', 'cooking_time')
 
 
 class SubscribedUserSerializer(UserSerializer):
@@ -156,3 +157,13 @@ class SubscribedUserSerializer(UserSerializer):
             ))],
             many=True
         ).data
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    """Сериализатор для ответа при создании подписки"""
+    user = serializers.StringRelatedField()
+    author = serializers.StringRelatedField()
+
+    class Meta:
+        model = Subscription
+        fields = ('user', 'author')

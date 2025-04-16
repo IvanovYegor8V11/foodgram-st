@@ -27,6 +27,7 @@ from .serializers import (
     RecipeSerializer,
     ShortRecipeSerializer,
     SubscribedUserSerializer,
+    SubscriptionSerializer,
     UserSerializer
 )
 
@@ -39,11 +40,16 @@ class UserViewSet(DjoserUserViewSet):
     pagination_class = PagesPagination
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    def get_permissions(self):
+        """Переопределение разрешений для метода me"""
+        if self.action == 'me':
+            return [IsAuthenticated()]
+        return super().get_permissions()
+
     @action(
         detail=False,
         methods=['get'],
-        url_path='me',
-        permission_classes=[IsAuthenticated]
+        url_path='me'
     )
     def get_me(self, request):
         """Метод для получения текущего пользователя"""
@@ -87,7 +93,7 @@ class UserViewSet(DjoserUserViewSet):
             )
 
         if request.method == 'POST':
-            subscription, created = Subscription.objects.get_or_create(
+            _, created = Subscription.objects.get_or_create(
                 user=request.user,
                 author=author
             )
@@ -96,10 +102,10 @@ class UserViewSet(DjoserUserViewSet):
                 raise ValidationError({'errors': 'Подписка уже была оформлена'})
 
             return Response(
-                {
-                    "user": subscription.user.username,
-                    "author": subscription.author.username
-                },
+                SubscriptionSerializer(Subscription.objects.get(
+                    user=request.user,
+                    author=author
+                )).data,
                 status=status.HTTP_201_CREATED
             )
 
@@ -197,7 +203,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         в списке избранных или в корзине покупок
         """
         if request.method == 'POST':
-            obj, created = model.objects.get_or_create(
+            _, created = model.objects.get_or_create(
                 user=request.user,
                 recipe=recipe
             )
@@ -248,11 +254,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Метод для загрузки текстового отчета со списком покупок"""
 
         ingredient_totals = {}
-        recipe_names = set()
+        recipe_names = {}
 
         for item in (request.user.shoppingcarts.all()
                 .select_related('recipe')):
-            recipe_names.add(item.recipe.name)
+            recipe_names[item.recipe.name] = item.recipe.author.username
             for ingredient_in_recipe in item.recipe.recipe_ingredients.all():
                 key = (
                     ingredient_in_recipe.ingredient.name,
@@ -261,26 +267,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 ingredient_totals[key] = (ingredient_totals.get(key, 0)
                                           + ingredient_in_recipe.amount)
 
-        today = timezone.now().strftime('%d.%m.%Y')
-        report_lines = [
-            f'Список покупок на {today}:',
-            'Продукты:',
-        ]
-
-        '''Нумерация и сортировка ингредиентов по имени'''
-        for number_of_product, ((name, unit), amount) in enumerate(
-            sorted(ingredient_totals.items(), key=lambda x: x[0])
-        ):
-            report_lines.append(
-                f'{number_of_product + 1}. '
-                f'{name.capitalize()} ({unit}) - {amount}'
-            )
-
-        report_lines.append('\nРецепты, для которых нужны эти продукты:')
-        for number_of_product, recipe_name in enumerate(sorted(recipe_names)):
-            report_lines.append(f'{number_of_product + 1}. {recipe_name}')
-
-        report_text = '\n'.join(report_lines)
+        report_text = self._render_shopping_cart(
+            ingredient_totals,
+            recipe_names,
+            timezone.now().strftime('%d.%m.%Y')
+        )
 
         return FileResponse(
             report_text,
@@ -288,10 +279,37 @@ class RecipeViewSet(viewsets.ModelViewSet):
             filename='shopping_cart.txt'
         )
 
+    def _render_shopping_cart(self, ingredient_totals, recipe_names, date):
+        """Метод для формирования текста списка покупок"""
+        report_lines = [
+            f'Список покупок на {date}:',
+            'Продукты:',
+        ]
+
+        for number_of_product, ((name, unit), amount) in enumerate(
+            sorted(ingredient_totals.items(), key=lambda x: x[0]),
+            start=1
+        ):
+            report_lines.append(
+                f'{number_of_product}. '
+                f'{name.capitalize()} ({unit}) - {amount}'
+            )
+
+        report_lines.append('\nРецепты, для которых нужны эти продукты:')
+        for number_of_product, (recipe_name, author) in enumerate(
+            sorted(recipe_names.items()),
+            start=1
+        ):
+            report_lines.append(
+                f'{number_of_product}. {recipe_name} (автор: {author})'
+            )
+
+        return '\n'.join(report_lines)
+
     @action(detail=True, methods=['get'], url_path='get-link')
     def get_link(self, request, pk=None):
         """Метод для получения короткой ссылки на рецепт"""
         short_link = request.build_absolute_uri(
-            reverse('recipe-short-link', args=[pk])
+            reverse('recipes:recipe-short-link', args=[pk])
         )
         return Response({'short-link': short_link}, status=status.HTTP_200_OK)
